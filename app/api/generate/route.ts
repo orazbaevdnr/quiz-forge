@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { groq, MODEL } from '@/lib/groq'
+import { getGroq, MODEL } from '@/lib/groq'
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 }
 "correct" — индекс правильного варианта (0-3). Вопросы должны проверять понимание, а не дословное запоминание. Пиши на языке исходного текста.`
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroq().chat.completions.create({
       model: MODEL,
       temperature: 0.7,
       response_format: { type: 'json_object' },
