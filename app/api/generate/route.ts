@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { complete, aiConfigured } from '@/lib/ai'
+import { rateLimit, getIp } from '@/lib/ratelimit'
 
 export async function POST(req: NextRequest) {
   try {
+    if (!rateLimit(getIp(req))) {
+      return NextResponse.json({ error: 'Слишком много запросов. Подождите минуту.' }, { status: 429 })
+    }
     const { text, count = 10, difficulty = 'medium' } = await req.json()
     if (!text?.trim() || text.trim().length < 50) {
       return NextResponse.json({ error: 'Слишком мало текста (минимум 50 символов)' }, { status: 400 })
@@ -34,7 +38,8 @@ export async function POST(req: NextRequest) {
     const raw = await complete({ system, user: content, json: true, temperature: 0.7 })
     const data = JSON.parse(raw || '{"questions":[]}')
     return NextResponse.json(data)
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Ошибка генерации' }, { status: 500 })
+  } catch (err) {
+    console.error('quiz error:', err)
+    return NextResponse.json({ error: 'Ошибка генерации. Попробуйте ещё раз.' }, { status: 500 })
   }
 }
