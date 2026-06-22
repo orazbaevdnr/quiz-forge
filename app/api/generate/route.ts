@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroq, MODEL } from '@/lib/groq'
+import { complete, aiConfigured } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,8 +7,8 @@ export async function POST(req: NextRequest) {
     if (!text?.trim() || text.trim().length < 50) {
       return NextResponse.json({ error: 'Слишком мало текста (минимум 50 символов)' }, { status: 400 })
     }
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'Сервис не настроен (нет GROQ_API_KEY)' }, { status: 503 })
+    if (!aiConfigured()) {
+      return NextResponse.json({ error: 'Сервис не настроен (нет AI-ключа)' }, { status: 503 })
     }
 
     const content = text.slice(0, 12000)
@@ -31,17 +31,8 @@ export async function POST(req: NextRequest) {
 }
 "correct" — индекс правильного варианта (0-3). Вопросы должны проверять понимание, а не дословное запоминание. Пиши на языке исходного текста.`
 
-    const completion = await getGroq().chat.completions.create({
-      model: MODEL,
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content },
-      ],
-    })
-
-    const data = JSON.parse(completion.choices[0]?.message?.content || '{"questions":[]}')
+    const raw = await complete({ system, user: content, json: true, temperature: 0.7 })
+    const data = JSON.parse(raw || '{"questions":[]}')
     return NextResponse.json(data)
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Ошибка генерации' }, { status: 500 })
